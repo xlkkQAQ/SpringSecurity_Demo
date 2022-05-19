@@ -1,6 +1,7 @@
 package com.xlkk.exceptionhandler;
 
-import com.xlkk.servicebase.utils.R;
+
+import com.xlkk.utils.R;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
