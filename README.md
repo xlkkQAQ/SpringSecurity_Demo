@@ -197,3 +197,89 @@ ResponseUtil.out(response, R.error());
 }
 }
 ~~~
+
+### 两个重要的过滤器
+#### 认证过滤器 TokenLoginFilter
+核心代码：
+~~~java
+public class TokenLoginFilter extends UsernamePasswordAuthenticationFilter {
+    public TokenLoginFilter(TokenManager tokenManager, RedisTemplate redisTemplate, AuthenticationManager authenticationManager) {
+        this.tokenManager = tokenManager;
+        this.redisTemplate = redisTemplate;
+        this.authenticationManager = authenticationManager;
+        this.setPostOnly(false);
+        this.setRequiresAuthenticationRequestMatcher(new AntPathRequestMatcher("admin/acl/login", "POST"));
+    }
+    //获取表单提交的用户名和密码
+    @Override
+    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
+        try {
+            User user = new ObjectMapper().readValue(request.getInputStream(), User.class);
+            return authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword(), new ArrayList<>()));
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+    }
+    
+    //认证成功后调用的方法
+    @Override
+    protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authResult) throws IOException, ServletException {
+        //认证成功之后，得到认证成功之后的用户信息
+        SecurityUser user = (SecurityUser) authResult.getPrincipal();
+        //根据用户名生成token
+        String token = tokenManager.createToken(user.getCurrentUserInfo().getUsername());
+        //把用户名称和用户权限列表放到redis里面去
+        redisTemplate.opsForValue().set(user.getCurrentUserInfo().getUsername(), user.getPermissionValueList());
+        //将token返回
+        ResponseUtil.out(response, R.ok().data("token", token));
+    }
+
+    //认证失败会调用的方法
+    @Override
+    protected void unsuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response, AuthenticationException failed) throws IOException, ServletException {
+        ResponseUtil.out(response, R.error());
+    }
+}
+~~~
+通过继承UsernamePasswordAuthenticationFilter类，重写它的几个方法，分别是通过requst的输入流获取用户提交的用户名和密码和认证成功后调用的方法，该方法就是将用户信息放入token以及将用户权限列表存到redis，并返回
+另一个就是认证失败会调用的方法，这个直接返回错误结果集就行了
+
+#### 授权过滤器
+授权过滤器核心代码
+~~~java
+/**
+ * 授权过滤器
+ */
+public class TokenAuthFilter extends BasicAuthenticationFilter {
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws IOException, ServletException {
+        //获取当前认证成功用户权限信息
+        UsernamePasswordAuthenticationToken authRequest = getAuthentication(request);
+        //如果有权限信息，就放到权限上下文中
+        if (authRequest != null) {
+            SecurityContextHolder.getContext().setAuthentication(authRequest);
+        }
+        chain.doFilter(request, response);
+    }
+
+    private UsernamePasswordAuthenticationToken getAuthentication(HttpServletRequest request) {
+        //从header里面获取token
+        String token = request.getHeader("token");
+        if (token != null) {
+            //通过token获取用户名
+            String username = tokenManager.getUserInfoFromToken(token);
+            //从redis中获取权限列表
+            List<String> permissionList = (List<String>) redisTemplate.opsForValue().get(username);
+            Collection<GrantedAuthority> authority = new ArrayList<>();
+            for (String s : permissionList) {
+                SimpleGrantedAuthority auth = new SimpleGrantedAuthority(s);
+                authority.add(auth);
+            }
+            return new UsernamePasswordAuthenticationToken(username, token, authority);
+        }
+        return null;
+    }
+}
+~~~
+该类继承了BasicAuthenticationFilter类，重写它的相关方法；它的核心方法是getAuthentication，它通过requst在请求头中获取token，然后通过token获取用户的username进而从redis中取出对应用户的权限信息。这里可以看到上面认证过滤器的时候，我们将对应用户的权限信息存入redis中了
