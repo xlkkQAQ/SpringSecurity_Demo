@@ -26,10 +26,10 @@ public class TokenAuthFilter extends BasicAuthenticationFilter {
     private TokenManager tokenManager;
     private RedisTemplate redisTemplate;
 
-    public TokenAuthFilter(AuthenticationManager authenticationManager) {
+    public TokenAuthFilter(AuthenticationManager authenticationManager, TokenManager tokenManager, RedisTemplate redisTemplate) {
         super(authenticationManager);
-        this.tokenManager = tokenManager;
-        this.redisTemplate = redisTemplate;
+        this.tokenManager = this.tokenManager;
+        this.redisTemplate = this.redisTemplate;
     }
 
     @Override

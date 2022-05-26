@@ -12,7 +12,7 @@
     <artifactId>service</artifactId>
     <packaging>pom</packaging>
     <modules>
-        <module>service_aci</module>
+        <module>service_acl</module>
     </modules>
 
     <properties>
