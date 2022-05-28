@@ -25,36 +25,14 @@ public class IndexController {
      */
     @GetMapping("info")
     public R info(){
-        //获取当前登录用户用户名
+        //通过SpringSecurity获取当前登录用户用户名
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         Map<String, Object> userInfo = indexService.getUserInfo(username);
         return R.ok().data(userInfo);
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     /**
-     * 获取菜单
+     * 获取用户菜单
      * @return
      */
     @GetMapping("menu")

@@ -1,0 +1,19 @@
+##端口号
+#server:
+#  port: 8082
+##  服务名称
+#spring:
+#  application:
+#    name: service-gateway
+#  cloud:
+#    nacos:
+#      discovery:
+#        server-addr: 127.0.0.1:8848
+#    gateway:
+#      discovery:
+#        locator:
+#          enabled: true #使用服务发现路由
+#      routes[0]:
+#        id: service-acl
+#        uri: lb://service-acl
+#        predicates: Path=/*/acl/** #配置路由规则

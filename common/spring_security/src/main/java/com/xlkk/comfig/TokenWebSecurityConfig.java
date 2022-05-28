@@ -28,25 +28,26 @@ public class TokenWebSecurityConfig extends WebSecurityConfigurerAdapter {
     private UserDetailsService userDetailsService;
 
     @Autowired
-    public TokenWebSecurityConfig(TokenManager tokenManager, RedisTemplate redisTemplate, DefaultPasswordEncoder defaultPasswordEncoder, UserDetailsService userDetailsService) {
+    public TokenWebSecurityConfig(UserDetailsService userDetailsService, DefaultPasswordEncoder defaultPasswordEncoder,
+                                  TokenManager tokenManager, RedisTemplate redisTemplate) {
+        this.userDetailsService = userDetailsService;
+        this.defaultPasswordEncoder = defaultPasswordEncoder;
         this.tokenManager = tokenManager;
         this.redisTemplate = redisTemplate;
-        this.defaultPasswordEncoder = defaultPasswordEncoder;
-        this.userDetailsService = userDetailsService;
     }
+
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http.exceptionHandling()
-                .authenticationEntryPoint(new UnauthEntryPoint())//没有权限访问的话，进入到该处理器
+                .authenticationEntryPoint(new UnauthEntryPoint())//没有权限访问
                 .and().csrf().disable()
                 .authorizeRequests()
                 .anyRequest().authenticated()
-                .and().logout().logoutUrl("adming/acl/index/logout")//设置退出登录的路径
-                .addLogoutHandler(new TokenLogoutHandler(tokenManager,redisTemplate)).and()//设置退出登录的处理器
-                .addFilter(new TokenLoginFilter(tokenManager, redisTemplate, authenticationManager()))
-                .addFilter(new TokenAuthFilter(authenticationManager(),tokenManager,redisTemplate)).httpBasic();
-
+                .and().logout().logoutUrl("/admin/acl/index/logout")//退出路径
+                .addLogoutHandler(new TokenLogoutHandler(tokenManager,redisTemplate)).and()
+                .addFilter(new TokenLoginFilter(authenticationManager(), tokenManager, redisTemplate))
+                .addFilter(new TokenAuthFilter(authenticationManager(), tokenManager, redisTemplate)).httpBasic();
     }
     //调用UserDetailService和密码处理
     @Override
